@@ -1,0 +1,21 @@
+# Sample files with real business data (public repo)
+muster/
+
+# Dependencies and build output
+node_modules/
+dist/
+.vite/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+.clasprc.json
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
