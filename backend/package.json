@@ -1,0 +1,14 @@
+{
+  "name": "baustellen-app-backend",
+  "private": true,
+  "description": "Google Apps Script backend of the Baustellen-App, with a local emulator for tests and development",
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "node dev/server.js",
+    "push": "clasp push",
+    "deploy": "clasp push && clasp deploy --description \"Baustellen-App\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

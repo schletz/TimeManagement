@@ -19,3 +19,9 @@ dist/
 .DS_Store
 Thumbs.db
 *.log
+
+# Apps Script project binding (per deployment, see backend/.clasp.json.example)
+backend/.clasp.json
+
+# Playwright CLI artifacts
+.playwright-cli/
