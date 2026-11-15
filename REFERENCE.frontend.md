@@ -1,6 +1,6 @@
 # Reference: Frontend (React PWA)
 
-Scope: `frontend/` – the mobile-first PWA served from GitHub Pages, plus the deploy workflow `.github/workflows/deploy-pages.yml`. The backend API it calls is described in `REFERENCE.backend.md`; the business specification is `SPEC.md`.
+Scope: `frontend/` – the mobile-first PWA served from GitHub Pages, plus the deploy workflow `.github/workflows/deploy-pages.yml`. The backend API it calls, including roles and permissions, is described in `REFERENCE.backend.md`.
 Conventions: paths relative to the repository root; React 19, Vite 8, TypeScript 7, react-router 7 (`HashRouter`), vite-plugin-pwa 2; UI text German, code English; one exported component per file.
 Read the diagrams first.
 

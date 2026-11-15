@@ -1,6 +1,6 @@
 # Reference: Backend (Google Apps Script) and local emulator
 
-Scope: `backend/` – the Apps Script web app that stores all data in the owner's Google Drive, plus the Node emulator used for tests and local development. The frontend is described in `REFERENCE.frontend.md`; the business specification is `SPEC.md`.
+Scope: `backend/` – the Apps Script web app that stores all data in the owner's Google Drive, plus the Node emulator used for tests and local development. The frontend is described in `REFERENCE.frontend.md`; setup steps for humans are in `README.md`.
 Conventions: paths relative to the repository root; dates `YYYY-MM-DD`, times `HH:MM`, timestamps `YYYY-MM-DDTHH:MM:SS`, all in Europe/Vienna; amounts in EUR, rounded to 2 decimals; code and identifiers English, sheet headers and user messages German.
 Read the diagrams first.
 
@@ -11,6 +11,8 @@ Read the diagrams first.
 - Billing: selects open hours/purchases up to a cutoff date, freezes hourly rates, renders a DOCX from a Google Doc template, tracks open → invoiced → paid.
 - `setup()` creates folders, master spreadsheet with seed data and the invoice template.
 - `backend/dev` runs the unchanged source files in a Node `vm` with in-memory fakes of the Apps Script services.
+- Only free services: GitHub Pages (public repo), Apps Script, Drive, Sheets, Docs, MailApp.
+- Out of scope (per user): import of old data from the former Excel workflow, background offline sync, tax-compliant bookkeeping (invoice numbers may have gaps, invoices may be deleted), e-invoicing, dunning, sending invoices by mail, payroll and breaks, languages other than German.
 
 ## Diagrams
 
@@ -262,6 +264,23 @@ loader ..> ctx : replaces InvoiceDocument.render\nand InvoiceTemplate.create
 - The payload shapes are the parameter JSDoc of each handler; the frontend mirrors them in `frontend/src/api/types.ts`. Responses are the `dto()` functions of each module (rates are omitted for employees in `TimeEntries.dto`, employee projects lack markup fields in `Projects.dto`).
 - Binary data (images, DOCX) travels as base64 inside JSON: `{ base64, mimeType, name }` (`Storage.readBase64`).
 
+### Roles and permissions
+
+Exactly two roles: chef (the one account in `settings.chefEmail`) and employee (active rows of Mitarbeiter). The chef is usually also an employee with an hourly rate. Employees only work in active projects (`Projects.requireAccess`); the chef may still bill and correct in closed ones. Invoiced or paid items cannot be changed by anybody; the correction is deleting the invoice (items return to open).
+
+| Function | Employee | Chef |
+| --- | --- | --- |
+| See projects | all active, no assignment | all, incl. closed |
+| Record hours / purchases | own | for any employee |
+| Edit / delete hours, purchases | own, while open | any, while open |
+| See hours, purchases | own only (purchases incl. reimbursement status, no rates) | all, with rates |
+| Mark purchases reimbursed | no | yes |
+| Report / see material demand | yes / all of the project | yes / all |
+| Demand status | `done` on own reports only | any (`open → ordered → done`, `open → done` allowed) |
+| Upload / see photos | yes / all of the project | yes / all |
+| Annotate later / delete photo | own | all |
+| Projects, employees, catalog, settings, invoices, dashboard | no | yes |
+
 ### Error codes
 
 | Code | Meaning / frontend reaction |
@@ -282,9 +301,10 @@ loader ..> ctx : replaces InvoiceDocument.render\nand InvoiceTemplate.create
 | Item | Value |
 | --- | --- |
 | Script properties | `ROOT_FOLDER_ID`, `MASTER_SHEET_ID`, `TEMPLATE_DOC_ID` (written by `setup()`), `CLIENT_ID` (OAuth web client id, set manually) |
-| `backend/src/appsscript.json` | V8, time zone Europe/Vienna, webapp `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`, scopes spreadsheets, drive, documents, script.external_request, script.send_mail, userinfo.email |
+| `backend/src/appsscript.json` | V8, time zone Europe/Vienna, webapp `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`, scopes spreadsheets, drive, documents, script.external_request, script.send_mail, userinfo.email. "Anyone with a Google account" does not work because `fetch` from GitHub Pages cannot send Google session cookies; protection is the token check alone |
+| Quotas (consumer account) | 6 min per execution, ≈ 30 concurrent executions, 20 000 UrlFetch and 100 mails per day; typical response 1–3 s, hence loading states and idempotent saves in the frontend |
 | `backend/.clasp.json` | gitignored; `{"scriptId": "...", "rootDir": "src"}` (template `.clasp.json.example`) |
-| Owner account | oliver.schletz@gmail.com (per user); data lives in its Drive |
+| Owner account | oliver.schletz@gmail.com (per user); data lives in its Drive. `chefEmail` only controls app rights; moving the data to another account means a new deployment and `setup()` under that account |
 | Script id | `1n4ouDliJMFu0sYdNvALNsjSrvRmO5Tj88RS3KyYuzi8ADoe-LNQwyRBk` |
 | Web app deployment | `AKfycbylashdgj_ymC0jLE4dWjt6IF0BjJcIcJIDY30Ir438gl8AfYfC2z5UAKXLfLKa9MfK` → `https://script.google.com/macros/s/<id>/exec` |
 | OAuth client | GCP project `zeiterfassung-514717`, web client "Baustellen-App Web" `472722239179-qo32qqjbs38g5t3cvq08g9btq14svkb1.apps.googleusercontent.com`, origins `https://schletz.github.io`, `http://localhost:5173`; consent screen in **testing** mode: every user must be a test user in Google Auth Platform → Audience (per user, max 100) |
@@ -321,6 +341,7 @@ Baustellen-App/                      ROOT_FOLDER_ID, created by setup()
 - Sections: paragraphs whose whole text is `{{#name}}` … `{{/name}}`; content removed when empty, marker paragraphs always removed. Names: `extras`, `material`, `annex` (wraps the page break and both annexes), `timeEntries`, `purchases`.
 - Values are formatted de-AT by `Format.js` (`1.234,50 €`, `14.11.2026`).
 - After `setup()` the chef edits company data, bank details and layout directly in the Google Doc; `resetInvoiceTemplate()` overwrites those edits.
+- Required content (per user): company header, recipient (client; address and customer UID are added by the chef in Word), number, date, service period, invoice kind, project data, one labor line per employee (hours × rate), extra positions (section dropped when empty), material base and markup (% and €), totals with VAT 0 %, reverse-charge text, bank details and payment terms (fixed template text), annexes with every time entry and every purchase. The DOCX stays editable in Word.
 
 ## Command line and dependencies
 
@@ -395,7 +416,7 @@ Settings and employees are needed on every request; they are cached as one JSON 
 
 - Every save uses the client-generated UUID as row id: unknown id → insert, known id → update. Retries are therefore idempotent.
 - `TimeEntries.save`: date ≤ today, `to > from`, hours = `Calc.hours` (quarter hours, no break). Overlap check only against entries of the same employee and day **in the same project**; cross-project overlaps are not detected (opening all project sheets per save is too slow).
-- `Purchases`: amount is the gross till amount; `receiptFileId` must lie in the project's `Belege/` folder (`Storage.isInFolder`). Replacing or removing a receipt trashes the old file. `setReimbursed` takes either `projectId` + `ids` or `employeeId` alone (all unreimbursed purchases of that employee in all projects). `listMyReimbursements` reads all projects, including closed ones, without `requireAccess`.
+- `Purchases`: amount is the gross till amount (no VAT split stored; it is also the markup base); reimbursement is independent of the billing status; `receiptFileId` must lie in the project's `Belege/` folder (`Storage.isInFolder`). Replacing or removing a receipt trashes the old file. `setReimbursed` takes either `projectId` + `ids` or `employeeId` alone (all unreimbursed purchases of that employee in all projects). `listMyReimbursements` reads all projects, including closed ones, without `requireAccess`.
 - `Demands.save` only creates (existing id → returns the row) and mails the chef; mail errors are logged, not raised. `setStatus`: chef any status; employee only `done` on own reports (`reporterId`).
 - `Photos.update` with new image: DriveApp cannot overwrite binary content, so a new file is created, the old one trashed and `fileId` changes. `list` returns thumbnails via `Storage.thumbnails`; `thumbnail` is null while Drive has not generated one.
 - `getPhoto` accepts `photoId` or `demandId`; `getReceipt` is restricted to the buyer and the chef.

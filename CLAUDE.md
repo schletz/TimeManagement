@@ -1,6 +1,6 @@
 # Baustellen-App
 
-Time, material and photo tracking for construction sites with invoicing; specification in `SPEC.md`, setup for humans in `README.md`.
+Time, material and photo tracking for construction sites with invoicing; setup for humans in `README.md`.
 
 ## Agent reference
 

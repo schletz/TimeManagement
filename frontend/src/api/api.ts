@@ -5,7 +5,7 @@ import type {
   TimeEntry, TimeEntryInput,
 } from './types';
 
-/** Typed wrappers for all backend actions (see SPEC chapter 7). */
+/** Typed wrappers for all backend actions (one per entry of `ACTIONS` in backend/src/Main.js). */
 export const api = {
   me: () => apiCall<Me>('me'),
 

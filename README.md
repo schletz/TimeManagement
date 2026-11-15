@@ -1,6 +1,6 @@
 # Baustellen-App
 
-Zeit-, Material- und Fotoerfassung pro Baustelle mit Abrechnung als Word-Datei. Die fachliche Spezifikation steht in [SPEC.md](SPEC.md).
+Zeit-, Material- und Fotoerfassung pro Baustelle mit Abrechnung als Word-Datei.
 
 | Teil | Technik | Ordner |
 |------|---------|--------|
@@ -57,7 +57,7 @@ Die Backend-Tests laden den echten Apps-Script-Code in eine Node-VM mit nachgeba
 
 Rechnungsvorlage neu erzeugen (z. B. nach einer Layout-Änderung im Code): im Script-Editor `resetInvoiceTemplate` ausführen. Die alte Vorlage wandert in den Papierkorb.
 
-## Umsetzungsdetails und Ergänzungen zur Spezifikation
+## Umsetzungsdetails
 
 - **Überschneidungswarnung** bei Stunden: Sie prüft nur Einträge desselben Mitarbeiters am selben Tag *im selben Projekt*. Ein Abgleich über alle Projekte müsste bei jedem Speichern alle Projekt-Sheets öffnen. Die Warnung kommt als `CONFIRM_REQUIRED` und wird nach Bestätigung erneut gesendet.
 - **Rechnungsart** (Rechnung / Zwischenrechnung / Schlussrechnung) ist im Assistenten wählbar. Voreinstellung: „Zwischenrechnung“ bei aktiven, „Schlussrechnung“ bei abgeschlossenen Projekten. Sie wird in der Spalte „Art“ gespeichert.
